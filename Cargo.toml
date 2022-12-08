@@ -9,5 +9,6 @@ crate-type = ["cdylib"]
 
 [dependencies]
 hashbrown = "0.13.1"
+ouroboros = "0.15.5"
 pyo3 = "0.17.3"
 vibrato_rust = { package = "vibrato", git = "https://github.com/daac-tools/vibrato.git", version = "0.3.1" }

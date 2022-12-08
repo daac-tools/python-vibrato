@@ -1,10 +1,9 @@
 use std::cell::RefCell;
-use std::marker::PhantomPinned;
-use std::pin::Pin;
 
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyUnicode};
 
 use hashbrown::HashMap;
+use ouroboros::self_referencing;
 use vibrato_rust::{tokenizer::worker::Worker, Dictionary, SystemDictionaryBuilder, Tokenizer};
 
 /// Representation of a token.
@@ -117,7 +116,13 @@ impl TokenList {
     }
 }
 
-struct PinnedTokenizer(Tokenizer, PhantomPinned);
+#[self_referencing]
+pub struct TokenizerWrapper {
+    tokenizer: Tokenizer,
+    #[borrows(tokenizer)]
+    #[not_covariant]
+    worker: Worker<'this>,
+}
 
 /// Python binding of Vibrato tokenizer.
 ///
@@ -159,27 +164,9 @@ struct PinnedTokenizer(Tokenizer, PhantomPinned);
 #[pyclass]
 #[pyo3(text_signature = "($self, dict_data, /, ignore_space = False, max_grouping_len = 0)")]
 struct Vibrato {
-    tokenizer: Pin<Box<PinnedTokenizer>>,
-    worker: Option<Worker<'static>>,
+    wrapper: TokenizerWrapper,
     surface_cache: RefCell<HashMap<String, Py<PyUnicode>>>,
     feature_cache: RefCell<HashMap<String, Py<PyUnicode>>>,
-}
-
-impl Vibrato {
-    fn init_worker(&mut self) {
-        if self.worker.is_some() {
-            return;
-        }
-        // FIXME: The following code is very dangerous.
-        // The tokenizer is pinned but can be disposed even while the reference is in use.
-        // Related issue: https://github.com/daac-tools/vibrato/issues/99
-        let tokenizer: Pin<&'static PinnedTokenizer> = unsafe {
-            std::mem::transmute::<Pin<&PinnedTokenizer>, Pin<&'static PinnedTokenizer>>(
-                Pin::as_ref(&self.tokenizer),
-            )
-        };
-        self.worker.replace(tokenizer.get_ref().0.new_worker());
-    }
 }
 
 #[pymethods]
@@ -192,9 +179,13 @@ impl Vibrato {
             .ignore_space(ignore_space)
             .map_err(|e| PyValueError::new_err(e.to_string()))?
             .max_grouping_len(max_grouping_len);
+        let wrapper = TokenizerWrapperBuilder {
+            tokenizer,
+            worker_builder: |tokenizer: &Tokenizer| tokenizer.new_worker(),
+        }
+        .build();
         Ok(Self {
-            tokenizer: Box::pin(PinnedTokenizer(tokenizer, PhantomPinned)),
-            worker: None,
+            wrapper,
             surface_cache: RefCell::new(HashMap::new()),
             feature_cache: RefCell::new(HashMap::new()),
         })
@@ -232,9 +223,13 @@ impl Vibrato {
             .ignore_space(ignore_space)
             .map_err(|e| PyValueError::new_err(e.to_string()))?
             .max_grouping_len(max_grouping_len);
+        let wrapper = TokenizerWrapperBuilder {
+            tokenizer,
+            worker_builder: |tokenizer: &Tokenizer| tokenizer.new_worker(),
+        }
+        .build();
         Ok(Self {
-            tokenizer: Box::pin(PinnedTokenizer(tokenizer, PhantomPinned)),
-            worker: None,
+            wrapper,
             surface_cache: RefCell::new(HashMap::new()),
             feature_cache: RefCell::new(HashMap::new()),
         })
@@ -247,44 +242,45 @@ impl Vibrato {
     /// :type out: vibrato.TokenList
     #[pyo3(text_signature = "($self, text, /)")]
     fn tokenize(&mut self, py: Python, text: &str) -> TokenList {
-        self.init_worker();
-        let worker = self.worker.as_mut().unwrap();
-        worker.reset_sentence(text);
-        worker.tokenize();
-        let surface_cache = &mut self.surface_cache.borrow_mut();
-        let feature_cache = &mut self.feature_cache.borrow_mut();
-        TokenList {
-            tokens: worker
-                .token_iter()
-                .map(|token| {
-                    let surface = surface_cache
-                        .raw_entry_mut()
-                        .from_key(token.surface())
-                        .or_insert_with(|| {
-                            (
-                                token.surface().to_string(),
-                                PyUnicode::new(py, token.surface()).into(),
-                            )
-                        })
-                        .1
-                        .clone_ref(py);
-                    let feature = feature_cache
-                        .raw_entry_mut()
-                        .from_key(token.feature())
-                        .or_insert_with(|| {
-                            (
-                                token.feature().to_string(),
-                                PyUnicode::new(py, token.feature()).into(),
-                            )
-                        })
-                        .1
-                        .clone_ref(py);
-                    let start = token.range_char().start;
-                    let end = token.range_char().end;
-                    (surface, start, end, feature)
-                })
-                .collect(),
-        }
+        self.wrapper.with_mut(|fields| {
+            fields.worker.reset_sentence(text);
+            fields.worker.tokenize();
+            let surface_cache = &mut self.surface_cache.borrow_mut();
+            let feature_cache = &mut self.feature_cache.borrow_mut();
+            TokenList {
+                tokens: fields
+                    .worker
+                    .token_iter()
+                    .map(|token| {
+                        let surface = surface_cache
+                            .raw_entry_mut()
+                            .from_key(token.surface())
+                            .or_insert_with(|| {
+                                (
+                                    token.surface().to_string(),
+                                    PyUnicode::new(py, token.surface()).into(),
+                                )
+                            })
+                            .1
+                            .clone_ref(py);
+                        let feature = feature_cache
+                            .raw_entry_mut()
+                            .from_key(token.feature())
+                            .or_insert_with(|| {
+                                (
+                                    token.feature().to_string(),
+                                    PyUnicode::new(py, token.feature()).into(),
+                                )
+                            })
+                            .1
+                            .clone_ref(py);
+                        let start = token.range_char().start;
+                        let end = token.range_char().end;
+                        (surface, start, end, feature)
+                    })
+                    .collect(),
+            }
+        })
     }
 
     /// Tokenize a given text and return as a list of surfaces.
@@ -294,27 +290,28 @@ impl Vibrato {
     /// :type out: list[str]
     #[pyo3(text_signature = "($self, text, /)")]
     fn tokenize_to_surfaces(&mut self, py: Python, text: &str) -> Vec<Py<PyUnicode>> {
-        self.init_worker();
-        let worker = self.worker.as_mut().unwrap();
-        worker.reset_sentence(text);
-        worker.tokenize();
-        let surface_cache = &mut self.surface_cache.borrow_mut();
-        worker
-            .token_iter()
-            .map(|token| {
-                surface_cache
-                    .raw_entry_mut()
-                    .from_key(token.surface())
-                    .or_insert_with(|| {
-                        (
-                            token.surface().to_string(),
-                            PyUnicode::new(py, token.surface()).into(),
-                        )
-                    })
-                    .1
-                    .clone_ref(py)
-            })
-            .collect()
+        self.wrapper.with_mut(|fields| {
+            fields.worker.reset_sentence(text);
+            fields.worker.tokenize();
+            let surface_cache = &mut self.surface_cache.borrow_mut();
+            fields
+                .worker
+                .token_iter()
+                .map(|token| {
+                    surface_cache
+                        .raw_entry_mut()
+                        .from_key(token.surface())
+                        .or_insert_with(|| {
+                            (
+                                token.surface().to_string(),
+                                PyUnicode::new(py, token.surface()).into(),
+                            )
+                        })
+                        .1
+                        .clone_ref(py)
+                })
+                .collect()
+        })
     }
 }
 
