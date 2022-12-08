@@ -242,6 +242,36 @@ impl Vibrato {
                 .collect(),
         }
     }
+
+    /// Tokenize a given text and return as a list of surfaces.
+    ///
+    /// :param text: A text to tokenize.
+    /// :type text: str
+    /// :type out: list[str]
+    #[pyo3(text_signature = "($self, text, /)")]
+    fn tokenize_to_surfaces(&mut self, py: Python, text: &str) -> Vec<Py<PyUnicode>> {
+        self.init_worker();
+        let worker = self.worker.as_mut().unwrap();
+        worker.reset_sentence(text);
+        worker.tokenize();
+        let surface_cache = &mut self.surface_cache.borrow_mut();
+        worker
+            .token_iter()
+            .map(|token| {
+                surface_cache
+                    .raw_entry_mut()
+                    .from_key(token.surface())
+                    .or_insert_with(|| {
+                        (
+                            token.surface().to_string(),
+                            PyUnicode::new(py, token.surface()).into(),
+                        )
+                    })
+                    .1
+                    .clone_ref(py)
+            })
+            .collect()
+    }
 }
 
 #[pymodule]
