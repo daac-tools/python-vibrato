@@ -120,7 +120,7 @@ impl TokenList {
 pub struct TokenizerWrapper {
     tokenizer: Tokenizer,
     #[borrows(tokenizer)]
-    #[not_covariant]
+    #[covariant]
     worker: Worker<'this>,
 }
 
@@ -242,45 +242,45 @@ impl Vibrato {
     /// :type out: vibrato.TokenList
     #[pyo3(text_signature = "($self, text, /)")]
     fn tokenize(&mut self, py: Python, text: &str) -> TokenList {
-        self.wrapper.with_mut(|fields| {
-            fields.worker.reset_sentence(text);
-            fields.worker.tokenize();
-            let surface_cache = &mut self.surface_cache.borrow_mut();
-            let feature_cache = &mut self.feature_cache.borrow_mut();
-            TokenList {
-                tokens: fields
-                    .worker
-                    .token_iter()
-                    .map(|token| {
-                        let surface = surface_cache
-                            .raw_entry_mut()
-                            .from_key(token.surface())
-                            .or_insert_with(|| {
-                                (
-                                    token.surface().to_string(),
-                                    PyUnicode::new(py, token.surface()).into(),
-                                )
-                            })
-                            .1
-                            .clone_ref(py);
-                        let feature = feature_cache
-                            .raw_entry_mut()
-                            .from_key(token.feature())
-                            .or_insert_with(|| {
-                                (
-                                    token.feature().to_string(),
-                                    PyUnicode::new(py, token.feature()).into(),
-                                )
-                            })
-                            .1
-                            .clone_ref(py);
-                        let start = token.range_char().start;
-                        let end = token.range_char().end;
-                        (surface, start, end, feature)
+        self.wrapper.with_worker_mut(|worker| {
+            worker.reset_sentence(text);
+            worker.tokenize();
+        });
+        let surface_cache = &mut self.surface_cache.borrow_mut();
+        let feature_cache = &mut self.feature_cache.borrow_mut();
+        let tokens = self
+            .wrapper
+            .borrow_worker()
+            .token_iter()
+            .map(|token| {
+                let surface = surface_cache
+                    .raw_entry_mut()
+                    .from_key(token.surface())
+                    .or_insert_with(|| {
+                        (
+                            token.surface().to_string(),
+                            PyUnicode::new(py, token.surface()).into(),
+                        )
                     })
-                    .collect(),
-            }
-        })
+                    .1
+                    .clone_ref(py);
+                let feature = feature_cache
+                    .raw_entry_mut()
+                    .from_key(token.feature())
+                    .or_insert_with(|| {
+                        (
+                            token.feature().to_string(),
+                            PyUnicode::new(py, token.feature()).into(),
+                        )
+                    })
+                    .1
+                    .clone_ref(py);
+                let start = token.range_char().start;
+                let end = token.range_char().end;
+                (surface, start, end, feature)
+            })
+            .collect();
+        TokenList { tokens }
     }
 
     /// Tokenize a given text and return as a list of surfaces.
@@ -290,28 +290,28 @@ impl Vibrato {
     /// :type out: list[str]
     #[pyo3(text_signature = "($self, text, /)")]
     fn tokenize_to_surfaces(&mut self, py: Python, text: &str) -> Vec<Py<PyUnicode>> {
-        self.wrapper.with_mut(|fields| {
-            fields.worker.reset_sentence(text);
-            fields.worker.tokenize();
-            let surface_cache = &mut self.surface_cache.borrow_mut();
-            fields
-                .worker
-                .token_iter()
-                .map(|token| {
-                    surface_cache
-                        .raw_entry_mut()
-                        .from_key(token.surface())
-                        .or_insert_with(|| {
-                            (
-                                token.surface().to_string(),
-                                PyUnicode::new(py, token.surface()).into(),
-                            )
-                        })
-                        .1
-                        .clone_ref(py)
-                })
-                .collect()
-        })
+        self.wrapper.with_worker_mut(|worker| {
+            worker.reset_sentence(text);
+            worker.tokenize();
+        });
+        let surface_cache = &mut self.surface_cache.borrow_mut();
+        self.wrapper
+            .borrow_worker()
+            .token_iter()
+            .map(|token| {
+                surface_cache
+                    .raw_entry_mut()
+                    .from_key(token.surface())
+                    .or_insert_with(|| {
+                        (
+                            token.surface().to_string(),
+                            PyUnicode::new(py, token.surface()).into(),
+                        )
+                    })
+                    .1
+                    .clone_ref(py)
+            })
+            .collect()
     }
 }
 
