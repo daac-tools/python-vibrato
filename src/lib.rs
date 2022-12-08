@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::marker::PhantomPinned;
 use std::pin::Pin;
 
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyUnicode};
@@ -116,6 +117,8 @@ impl TokenList {
     }
 }
 
+struct PinnedTokenizer(Tokenizer, PhantomPinned);
+
 /// Python binding of Vibrato tokenizer.
 ///
 /// Examples:
@@ -156,7 +159,7 @@ impl TokenList {
 #[pyclass]
 #[pyo3(text_signature = "($self, dict_data, /, ignore_space = False, max_grouping_len = 0)")]
 struct Vibrato {
-    tokenizer: Pin<Box<Tokenizer>>,
+    tokenizer: Pin<Box<PinnedTokenizer>>,
     worker: Option<Worker<'static>>,
     surface_cache: RefCell<HashMap<String, Py<PyUnicode>>>,
     feature_cache: RefCell<HashMap<String, Py<PyUnicode>>>,
@@ -169,12 +172,12 @@ impl Vibrato {
         }
         // Safety: The tokenizer is pinned and will continue to live until the Vibrato struct is
         // removed.
-        let tokenizer: Pin<&'static Tokenizer> = unsafe {
-            std::mem::transmute::<Pin<&Tokenizer>, Pin<&'static Tokenizer>>(Pin::as_ref(
-                &self.tokenizer,
-            ))
+        let tokenizer: Pin<&'static PinnedTokenizer> = unsafe {
+            std::mem::transmute::<Pin<&PinnedTokenizer>, Pin<&'static PinnedTokenizer>>(
+                Pin::as_ref(&self.tokenizer),
+            )
         };
-        self.worker.replace(tokenizer.get_ref().new_worker());
+        self.worker.replace(tokenizer.get_ref().0.new_worker());
     }
 }
 
@@ -189,7 +192,7 @@ impl Vibrato {
             .map_err(|e| PyValueError::new_err(e.to_string()))?
             .max_grouping_len(max_grouping_len);
         Ok(Self {
-            tokenizer: Box::pin(tokenizer),
+            tokenizer: Box::pin(PinnedTokenizer(tokenizer, PhantomPinned)),
             worker: None,
             surface_cache: RefCell::new(HashMap::new()),
             feature_cache: RefCell::new(HashMap::new()),
