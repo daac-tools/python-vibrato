@@ -5,7 +5,7 @@ use std::pin::Pin;
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyUnicode};
 
 use hashbrown::HashMap;
-use vibrato_rust::{tokenizer::worker::Worker, Dictionary, Tokenizer};
+use vibrato_rust::{tokenizer::worker::Worker, Dictionary, SystemDictionaryBuilder, Tokenizer};
 
 /// Representation of a token.
 #[pyclass]
@@ -188,6 +188,46 @@ impl Vibrato {
     #[args(ignore_space = "false", max_grouping_len = "0")]
     pub fn new(dict_data: &[u8], ignore_space: bool, max_grouping_len: usize) -> PyResult<Self> {
         let dict = Dictionary::read(dict_data).map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let tokenizer = Tokenizer::new(dict)
+            .ignore_space(ignore_space)
+            .map_err(|e| PyValueError::new_err(e.to_string()))?
+            .max_grouping_len(max_grouping_len);
+        Ok(Self {
+            tokenizer: Box::pin(PinnedTokenizer(tokenizer, PhantomPinned)),
+            worker: None,
+            surface_cache: RefCell::new(HashMap::new()),
+            feature_cache: RefCell::new(HashMap::new()),
+        })
+    }
+
+    /// Create a tokenizer from the text dictionary.
+    ///
+    /// :param lex_data: The content of `lex.csv`.
+    /// :param matrix_data: The content of `matrix.def`.
+    /// :param char_data: The content of `char.def`.
+    /// :param unk_data: The content of `unk.def`.
+    /// :type lex_data: str
+    /// :type matrix_data: str
+    /// :type char_data: str
+    /// :type unk_data: str
+    /// :type out: vibrato.Vibrato
+    #[staticmethod]
+    #[args(ignore_space = "false", max_grouping_len = "0")]
+    pub fn from_textdict(
+        lex_data: &str,
+        matrix_data: &str,
+        char_data: &str,
+        unk_data: &str,
+        ignore_space: bool,
+        max_grouping_len: usize,
+    ) -> PyResult<Self> {
+        let dict = SystemDictionaryBuilder::from_readers(
+            lex_data.as_bytes(),
+            matrix_data.as_bytes(),
+            char_data.as_bytes(),
+            unk_data.as_bytes(),
+        )
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
         let tokenizer = Tokenizer::new(dict)
             .ignore_space(ignore_space)
             .map_err(|e| PyValueError::new_err(e.to_string()))?
