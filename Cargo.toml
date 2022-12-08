@@ -1,0 +1,13 @@
+[package]
+name = "python-vibrato"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "vibrato"
+crate-type = ["cdylib"]
+
+[dependencies]
+hashbrown = "0.13.1"
+pyo3 = "0.17.3"
+vibrato_rust = { package = "vibrato", git = "https://github.com/daac-tools/vibrato.git", version = "0.3.1" }
