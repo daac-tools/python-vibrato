@@ -170,8 +170,9 @@ impl Vibrato {
         if self.worker.is_some() {
             return;
         }
-        // Safety: The tokenizer is pinned and will continue to live until the Vibrato struct is
-        // removed.
+        // FIXME: The following code is very danger.
+        // The tokenizer is pinned but can be disposed even while the reference is in use.
+        // Related issue: https://github.com/daac-tools/vibrato/issues/99
         let tokenizer: Pin<&'static PinnedTokenizer> = unsafe {
             std::mem::transmute::<Pin<&PinnedTokenizer>, Pin<&'static PinnedTokenizer>>(
                 Pin::as_ref(&self.tokenizer),
