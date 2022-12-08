@@ -170,7 +170,7 @@ impl Vibrato {
         if self.worker.is_some() {
             return;
         }
-        // FIXME: The following code is very danger.
+        // FIXME: The following code is very dangerous.
         // The tokenizer is pinned but can be disposed even while the reference is in use.
         // Related issue: https://github.com/daac-tools/vibrato/issues/99
         let tokenizer: Pin<&'static PinnedTokenizer> = unsafe {
