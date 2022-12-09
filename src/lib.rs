@@ -1,10 +1,10 @@
-use std::cell::RefCell;
-
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyUnicode};
 
 use hashbrown::HashMap;
 use ouroboros::self_referencing;
-use vibrato_rust::{tokenizer::worker::Worker, Dictionary, SystemDictionaryBuilder, Tokenizer};
+use vibrato_rust::{
+    dictionary::WordIdx, tokenizer::worker::Worker, Dictionary, SystemDictionaryBuilder, Tokenizer,
+};
 
 /// Representation of a token.
 #[pyclass]
@@ -44,7 +44,23 @@ impl Token {
     /// :type out: str
     #[pyo3(text_signature = "($self, index, /)")]
     fn feature(&self, py: Python) -> Py<PyUnicode> {
-        self.list.borrow(py).tokens[self.index].3.clone_ref(py)
+        let list = self.list.borrow(py);
+        let word_idx = list.tokens[self.index].3;
+        let vibrato = &mut *list.vibrato.borrow_mut(py);
+        vibrato
+            .feature_cache
+            .raw_entry_mut()
+            .from_key(&word_idx)
+            .or_insert_with(|| {
+                let token = vibrato
+                    .wrapper
+                    .borrow_tokenizer()
+                    .dictionary()
+                    .word_feature(word_idx);
+                (word_idx, PyUnicode::new(py, token).into())
+            })
+            .1
+            .clone_ref(py)
     }
 
     fn __str__(&self, py: Python) -> Py<PyUnicode> {
@@ -54,7 +70,12 @@ impl Token {
     fn __repr__(&self, py: Python) -> PyResult<String> {
         let list = self.list.borrow(py);
         let surface = list.tokens[self.index].0.as_ref(py).to_str()?;
-        let feature = list.tokens[self.index].3.as_ref(py).to_str()?;
+        let word_idx = list.tokens[self.index].3;
+        let wrapper = &list.vibrato.borrow(py).wrapper;
+        let feature = wrapper
+            .borrow_tokenizer()
+            .dictionary()
+            .word_feature(word_idx);
         Ok(format!(
             "Token {{ surface: {:?}, feature: {:?} }}",
             surface, feature
@@ -89,7 +110,8 @@ impl TokenIterator {
 /// Token list returned by the tokenizer.
 #[pyclass]
 struct TokenList {
-    tokens: Vec<(Py<PyUnicode>, usize, usize, Py<PyUnicode>)>,
+    vibrato: Py<Vibrato>,
+    tokens: Vec<(Py<PyUnicode>, usize, usize, WordIdx)>,
 }
 
 #[pymethods]
@@ -98,18 +120,21 @@ impl TokenList {
         self.tokens.len()
     }
 
-    fn __getitem__(self_: Py<Self>, py: Python, index: usize) -> PyResult<Token> {
-        if index < self_.borrow(py).tokens.len() {
-            Ok(Token { list: self_, index })
+    fn __getitem__(self_: PyRef<Self>, index: usize) -> PyResult<Token> {
+        if index < self_.tokens.len() {
+            Ok(Token {
+                list: self_.into(),
+                index,
+            })
         } else {
             Err(PyValueError::new_err("list index out of range"))
         }
     }
 
-    fn __iter__(self_: Py<Self>, py: Python) -> TokenIterator {
-        let len = self_.borrow(py).tokens.len();
+    fn __iter__(self_: PyRef<Self>) -> TokenIterator {
+        let len = self_.tokens.len();
         TokenIterator {
-            list: self_,
+            list: self_.into(),
             index: 0,
             len,
         }
@@ -165,8 +190,8 @@ pub struct TokenizerWrapper {
 #[pyo3(text_signature = "($self, dict_data, /, ignore_space = False, max_grouping_len = 0)")]
 struct Vibrato {
     wrapper: TokenizerWrapper,
-    surface_cache: RefCell<HashMap<String, Py<PyUnicode>>>,
-    feature_cache: RefCell<HashMap<String, Py<PyUnicode>>>,
+    surface_cache: HashMap<String, Py<PyUnicode>>,
+    feature_cache: HashMap<WordIdx, Py<PyUnicode>>,
 }
 
 #[pymethods]
@@ -186,8 +211,8 @@ impl Vibrato {
         .build();
         Ok(Self {
             wrapper,
-            surface_cache: RefCell::new(HashMap::new()),
-            feature_cache: RefCell::new(HashMap::new()),
+            surface_cache: HashMap::new(),
+            feature_cache: HashMap::new(),
         })
     }
 
@@ -230,8 +255,8 @@ impl Vibrato {
         .build();
         Ok(Self {
             wrapper,
-            surface_cache: RefCell::new(HashMap::new()),
-            feature_cache: RefCell::new(HashMap::new()),
+            surface_cache: HashMap::new(),
+            feature_cache: HashMap::new(),
         })
     }
 
@@ -241,19 +266,23 @@ impl Vibrato {
     /// :type text: str
     /// :type out: vibrato.TokenList
     #[pyo3(text_signature = "($self, text, /)")]
-    fn tokenize(&mut self, py: Python, text: &str) -> TokenList {
-        self.wrapper.with_worker_mut(|worker| {
+    fn tokenize(mut self_: PyRefMut<Self>, py: Python, text: &str) -> TokenList {
+        self_.wrapper.with_worker_mut(|worker| {
             worker.reset_sentence(text);
             worker.tokenize();
         });
-        let surface_cache = &mut self.surface_cache.borrow_mut();
-        let feature_cache = &mut self.feature_cache.borrow_mut();
-        let tokens = self
+        let self_deref = &mut *self_;
+        let tokens = self_deref
             .wrapper
             .borrow_worker()
             .token_iter()
             .map(|token| {
-                let surface = surface_cache
+                // Surface strings need to be converted to Python strings immediately because those
+                // strings are stored in the Worker.
+                // On the other hand, the feature strings are stored in the Tokenizer, not the
+                // Worker, so feature strings are converted as needed.
+                let surface = self_deref
+                    .surface_cache
                     .raw_entry_mut()
                     .from_key(token.surface())
                     .or_insert_with(|| {
@@ -264,23 +293,16 @@ impl Vibrato {
                     })
                     .1
                     .clone_ref(py);
-                let feature = feature_cache
-                    .raw_entry_mut()
-                    .from_key(token.feature())
-                    .or_insert_with(|| {
-                        (
-                            token.feature().to_string(),
-                            PyUnicode::new(py, token.feature()).into(),
-                        )
-                    })
-                    .1
-                    .clone_ref(py);
                 let start = token.range_char().start;
                 let end = token.range_char().end;
-                (surface, start, end, feature)
+                let word_idx = token.word_idx();
+                (surface, start, end, word_idx)
             })
             .collect();
-        TokenList { tokens }
+        TokenList {
+            vibrato: self_.into(),
+            tokens,
+        }
     }
 
     /// Tokenize a given text and return as a list of surfaces.
@@ -294,12 +316,11 @@ impl Vibrato {
             worker.reset_sentence(text);
             worker.tokenize();
         });
-        let surface_cache = &mut self.surface_cache.borrow_mut();
         self.wrapper
             .borrow_worker()
             .token_iter()
             .map(|token| {
-                surface_cache
+                self.surface_cache
                     .raw_entry_mut()
                     .from_key(token.surface())
                     .or_insert_with(|| {
