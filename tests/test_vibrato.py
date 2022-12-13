@@ -6,13 +6,13 @@ import vibrato
 
 def create_tokenizer():
     dict_path = pathlib.PurePath(__file__).parent / 'data'
-    with open(dict_path / 'lex.csv') as fp:
+    with open(dict_path / 'lex.csv', encoding='utf-8') as fp:
         lex_data = fp.read()
-    with open(dict_path / 'matrix.def') as fp:
+    with open(dict_path / 'matrix.def', encoding='utf-8') as fp:
         matrix_data = fp.read()
-    with open(dict_path / 'char.def') as fp:
+    with open(dict_path / 'char.def', encoding='utf-8') as fp:
         char_data = fp.read()
-    with open(dict_path / 'unk.def') as fp:
+    with open(dict_path / 'unk.def', encoding='utf-8') as fp:
         unk_data = fp.read()
     return vibrato.Vibrato.from_textdict(lex_data, matrix_data, char_data, unk_data)
 
