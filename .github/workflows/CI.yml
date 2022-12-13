@@ -1,0 +1,141 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        runs-on: [ ubuntu-latest, windows-latest, macos-latest ]
+        python-version: [ '3.7', '3.8', '3.9', '3.10', '3.11' ]
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    - uses: dtolnay/rust-toolchain@stable
+    - name: Build package
+      uses: PyO3/maturin-action@v1
+      with:
+        manylinux: auto
+        args: -i ${{ matrix.python-version }} --release
+    - name: Test package
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+        pip install vibrato --no-index --find-links target/wheels --force-reinstall
+        pytest
+
+  pack-sdist:
+    needs: [ test ]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    - uses: dtolnay/rust-toolchain@stable
+    - name: Build package
+      uses: PyO3/maturin-action@v1
+      with:
+        command: sdist
+    - name: Upload wheels
+      uses: actions/upload-artifact@v3
+      with:
+        name: wheels
+        path: target/wheels
+
+  pack-linux:
+    needs: [ test ]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ '3.7', '3.8', '3.9', '3.10', '3.11' ]
+        target: [ x86_64, i686 ]
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    - uses: dtolnay/rust-toolchain@stable
+    - name: Build package
+      uses: PyO3/maturin-action@v1
+      with:
+        target: ${{ matrix.target }}
+        manylinux: auto
+        args: -i ${{ matrix.python-version }} --release
+    - name: Upload wheels
+      uses: actions/upload-artifact@v3
+      with:
+        name: wheels
+        path: target/wheels
+
+  pack-windows:
+    needs: [ test ]
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: [ '3.7', '3.8', '3.9', '3.10', '3.11' ]
+        target: [ x64, x86 ]
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        architecture: ${{ matrix.target }}
+    - uses: dtolnay/rust-toolchain@stable
+    - name: Build package
+      uses: PyO3/maturin-action@v1
+      with:
+        target: ${{ matrix.target }}
+        manylinux: auto
+        args: -i ${{ matrix.python-version }} --release
+    - name: Upload wheels
+      uses: actions/upload-artifact@v3
+      with:
+        name: wheels
+        path: target/wheels
+
+  pack-macos:
+    needs: [ test ]
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        python-version: [ '3.7', '3.8', '3.9', '3.10', '3.11' ]
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    - uses: dtolnay/rust-toolchain@stable
+    - name: Build package
+      uses: PyO3/maturin-action@v1
+      with:
+        target: ${{ matrix.target }}
+        manylinux: auto
+        args: -i ${{ matrix.python-version }} --release --universal2
+    - name: Upload wheels
+      uses: actions/upload-artifact@v3
+      with:
+        name: wheels
+        path: target/wheels
+
+  release:
+    name: Release
+    if: "startsWith(github.ref, 'refs/tags/')"
+    needs: [ pack-sdist, pack-linux, pack-windows, pack-macos ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: wheels
+      - name: Publish to PyPI
+        uses: messense/maturin-action@v1
+        env:
+          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        with:
+          command: upload
+          args: --skip-existing *
