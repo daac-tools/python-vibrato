@@ -8,7 +8,7 @@ name = "vibrato"
 crate-type = ["cdylib"]
 
 [dependencies]
-hashbrown = "0.13.1"
-ouroboros = "0.15.5"
-pyo3 = { version = "0.17.3", features = ["extension-module"] }
-vibrato_rust = { package = "vibrato", git = "https://github.com/daac-tools/vibrato.git", rev = "a13cdda" }
+hashbrown = "0.13.1" # MIT or Apache-2.0
+ouroboros = "0.15.5" # MIT or Apache-2.0
+pyo3 = { version = "0.17.3", features = ["extension-module"] } # Apache-2.0
+vibrato_rust = { version = "0.3.2", default-features = false } # MIT or Apache-2.0
