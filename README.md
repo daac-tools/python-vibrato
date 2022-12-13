@@ -3,7 +3,18 @@
 [Vibrato](https://github.com/daac-tools/vibrato) is a fast implementation of tokenization (or morphological analysis) based on the Viterbi algorithm.
 This is a Python wrapper for Vibrato.
 
+[![PyPI](https://img.shields.io/pypi/v/vibrato)](https://pypi.org/project/vibrato/)
+[![Build Status](https://github.com/daac-tools/python-vibrato/actions/workflows/CI.yml/badge.svg)](https://github.com/daac-tools/python-vibrato/actions)
+
 ## Installation
+
+### Install pre-built package from PyPI
+
+Run the following command:
+
+```
+$ pip install vibrato
+```
 
 ### Build from source
 
@@ -17,7 +28,7 @@ $ pip install --upgrade pip
 After setting up the environment, you can install daachorse as follows:
 
 ```
-$ pip install .
+$ pip install git+https://github.com/daac-tools/python-vibrato
 ```
 
 ## Example Usage
