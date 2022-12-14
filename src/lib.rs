@@ -19,7 +19,7 @@ struct Token {
 impl Token {
     /// Return the surface of this token.
     ///
-    /// :type out: str
+    /// :rtype: str
     #[pyo3(text_signature = "($self, /)")]
     fn surface(&self, py: Python) -> Py<PyUnicode> {
         self.list.borrow(py).tokens[self.index].0.clone_ref(py)
@@ -27,7 +27,7 @@ impl Token {
 
     /// Return the start position (inclusive) in characters.
     ///
-    /// :type out: int
+    /// :rtype: int
     #[pyo3(text_signature = "($self, /)")]
     fn start(&self, py: Python) -> usize {
         self.list.borrow(py).tokens[self.index].1
@@ -35,7 +35,7 @@ impl Token {
 
     /// Return the end position (exclusive) in characters.
     ///
-    /// :type out: int
+    /// :rtype: int
     #[pyo3(text_signature = "($self, /)")]
     fn end(&self, py: Python) -> usize {
         self.list.borrow(py).tokens[self.index].2
@@ -43,7 +43,7 @@ impl Token {
 
     /// Return the feature of this token.
     ///
-    /// :type out: str
+    /// :rtype: str
     #[pyo3(text_signature = "($self, /)")]
     fn feature(&self, py: Python) -> Py<PyUnicode> {
         let list = self.list.borrow(py);
@@ -187,7 +187,7 @@ pub struct TokenizerWrapper {
 /// :type dict_data: bytes
 /// :type ignore_space: bool
 /// :type max_grouping_len: int
-/// :type out: vibrato.Vibrato
+/// :rtype: vibrato.Vibrato
 #[pyclass]
 #[pyo3(text_signature = "($self, dict_data, /, ignore_space = False, max_grouping_len = 0)")]
 struct Vibrato {
@@ -237,7 +237,7 @@ impl Vibrato {
     /// :type unk_data: str
     /// :type ignore_space: bool
     /// :type max_grouping_len: int
-    /// :type out: vibrato.Vibrato
+    /// :rtype: vibrato.Vibrato
     #[staticmethod]
     #[pyo3(text_signature = "($self, lex_data, matrix_data, char_data, unk_data, /, ignore_space = False, max_grouping_len = 0)")]
     #[args(ignore_space = "false", max_grouping_len = "0")]
@@ -276,7 +276,7 @@ impl Vibrato {
     ///
     /// :param text: A text to tokenize.
     /// :type text: str
-    /// :type out: vibrato.TokenList
+    /// :rtype: vibrato.TokenList
     #[pyo3(text_signature = "($self, text, /)")]
     fn tokenize(mut self_: PyRefMut<Self>, py: Python, text: &str) -> TokenList {
         self_.wrapper.with_worker_mut(|worker| {
@@ -327,7 +327,7 @@ impl Vibrato {
     ///
     /// :param text: A text to tokenize.
     /// :type text: str
-    /// :type out: list[str]
+    /// :rtype: list[str]
     #[pyo3(text_signature = "($self, text, /)")]
     fn tokenize_to_surfaces(&mut self, py: Python, text: &str) -> Vec<Py<PyUnicode>> {
         self.wrapper.with_worker_mut(|worker| {
