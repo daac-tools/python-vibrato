@@ -3,7 +3,9 @@ use pyo3::{exceptions::PyValueError, prelude::*, types::PyUnicode};
 use hashbrown::HashMap;
 use ouroboros::self_referencing;
 use vibrato_rust::{
-    dictionary::WordIdx, tokenizer::worker::Worker, Dictionary, SystemDictionaryBuilder, Tokenizer,
+    dictionary::{LexType, WordIdx},
+    tokenizer::worker::Worker,
+    Dictionary, SystemDictionaryBuilder, Tokenizer,
 };
 
 /// Representation of a token.
@@ -190,7 +192,7 @@ pub struct TokenizerWrapper {
 #[pyo3(text_signature = "($self, dict_data, /, ignore_space = False, max_grouping_len = 0)")]
 struct Vibrato {
     wrapper: TokenizerWrapper,
-    surface_cache: HashMap<String, Py<PyUnicode>>,
+    surface_cache: HashMap<WordIdx, Py<PyUnicode>>,
     feature_cache: HashMap<WordIdx, Py<PyUnicode>>,
 }
 
@@ -281,18 +283,24 @@ impl Vibrato {
                 // strings are stored in the Worker.
                 // On the other hand, the feature strings are stored in the Tokenizer, not the
                 // Worker, so feature strings are converted as needed.
-                let surface = self_deref
-                    .surface_cache
-                    .raw_entry_mut()
-                    .from_key(token.surface())
-                    .or_insert_with(|| {
-                        (
-                            token.surface().to_string(),
-                            PyUnicode::new(py, token.surface()).into(),
-                        )
-                    })
-                    .1
-                    .clone_ref(py);
+                let word_idx = token.word_idx();
+                // Cache the string only when the token is contained in the dictionary.
+                let surface = if word_idx.lex_type != LexType::Unknown {
+                    self_deref
+                        .surface_cache
+                        .raw_entry_mut()
+                        .from_key(&word_idx)
+                        .or_insert_with(|| {
+                            (
+                                word_idx,
+                                PyUnicode::new(py, token.surface()).into(),
+                            )
+                        })
+                        .1
+                        .clone_ref(py)
+                } else {
+                    PyUnicode::new(py, token.surface()).into()
+                };
                 let start = token.range_char().start;
                 let end = token.range_char().end;
                 let word_idx = token.word_idx();
@@ -320,17 +328,22 @@ impl Vibrato {
             .borrow_worker()
             .token_iter()
             .map(|token| {
+                let word_idx = token.word_idx();
+                if word_idx.lex_type != LexType::Unknown {
                 self.surface_cache
                     .raw_entry_mut()
-                    .from_key(token.surface())
+                    .from_key(&word_idx)
                     .or_insert_with(|| {
                         (
-                            token.surface().to_string(),
+                            word_idx,
                             PyUnicode::new(py, token.surface()).into(),
                         )
                     })
                     .1
                     .clone_ref(py)
+                } else {
+                    PyUnicode::new(py, token.surface()).into()
+                }
             })
             .collect()
     }
@@ -341,5 +354,6 @@ fn vibrato(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Vibrato>()?;
     m.add_class::<TokenList>()?;
     m.add_class::<Token>()?;
+    m.add("VIBRATO_VERSION", vibrato_rust::VERSION)?;
     Ok(())
 }

@@ -36,6 +36,16 @@ $ pip install git+https://github.com/daac-tools/python-vibrato
 python-vibrato does not contain model files.
 To perform tokenization, follow [the document of Vibrato](https://github.com/daac-tools/vibrato) to download distribution models or train your own models beforehand.
 
+Check the version number as shown below to use compatible models:
+
+```python
+import vibrato
+vibrato.VIBRATO_VERSION
+#=> "0.3.3"
+```
+
+Examples:
+
 ```python
 import vibrato
 
