@@ -177,13 +177,11 @@ pub struct TokenizerWrapper {
 ///     2
 ///
 /// :param dict_data: A byte sequence of the dictionary.
-/// :param ignore_space: Ignores spaces from tokens.
-///                      This option is for compatibility with MeCab. Enable this if you want to
-///                      obtain the same results as MeCab.
-/// :param max_grouping_len: Specifies the maximum grouping length for unknown words.
-///                          By default, the length is infinity.
-///                          This option is for compatibility with MeCab. Specifies the argument
-///                          with 24 if you want to obtain the same results as MeCab.
+/// :param ignore_space: Ignores spaces from tokens. This option is for compatibility with MeCab.
+///      Enable this if you want to obtain the same results as MeCab.
+/// :param max_grouping_len: Specifies the maximum grouping length for unknown words. By default,
+///      the length is infinity. This option is for compatibility with MeCab. Specifies the
+///      argument with 24 if you want to obtain the same results as MeCab.
 /// :type dict_data: bytes
 /// :type ignore_space: bool
 /// :type max_grouping_len: int
@@ -224,13 +222,11 @@ impl Vibrato {
     /// :param matrix_data: The content of `matrix.def`.
     /// :param char_data: The content of `char.def`.
     /// :param unk_data: The content of `unk.def`.
-    /// :param ignore_space: Ignores spaces from tokens.
-    ///                      This option is for compatibility with MeCab. Enable this if you want to
-    ///                      obtain the same results as MeCab.
-    /// :param max_grouping_len: Specifies the maximum grouping length for unknown words.
-    ///                          By default, the length is infinity.
-    ///                          This option is for compatibility with MeCab. Specifies the argument
-    ///                          with 24 if you want to obtain the same results as MeCab.
+    /// :param ignore_space: Ignores spaces from tokens. This option is for compatibility with
+    ///     MeCab. Enable this if you want to obtain the same results as MeCab.
+    /// :param max_grouping_len: Specifies the maximum grouping length for unknown words. By
+    ///     default, the length is infinity. This option is for compatibility with MeCab.
+    ///     Specifies the argument with 24 if you want to obtain the same results as MeCab.
     /// :type lex_data: str
     /// :type matrix_data: str
     /// :type char_data: str
@@ -239,7 +235,9 @@ impl Vibrato {
     /// :type max_grouping_len: int
     /// :rtype: vibrato.Vibrato
     #[staticmethod]
-    #[pyo3(text_signature = "($self, lex_data, matrix_data, char_data, unk_data, /, ignore_space = False, max_grouping_len = 0)")]
+    #[pyo3(
+        text_signature = "($self, lex_data, matrix_data, char_data, unk_data, /, ignore_space = False, max_grouping_len = 0)"
+    )]
     #[args(ignore_space = "false", max_grouping_len = "0")]
     pub fn from_textdict(
         lex_data: &str,
@@ -300,12 +298,7 @@ impl Vibrato {
                         .surface_cache
                         .raw_entry_mut()
                         .from_key(&word_idx)
-                        .or_insert_with(|| {
-                            (
-                                word_idx,
-                                PyUnicode::new(py, token.surface()).into(),
-                            )
-                        })
+                        .or_insert_with(|| (word_idx, PyUnicode::new(py, token.surface()).into()))
                         .1
                         .clone_ref(py)
                 } else {
@@ -340,17 +333,12 @@ impl Vibrato {
             .map(|token| {
                 let word_idx = token.word_idx();
                 if word_idx.lex_type != LexType::Unknown {
-                self.surface_cache
-                    .raw_entry_mut()
-                    .from_key(&word_idx)
-                    .or_insert_with(|| {
-                        (
-                            word_idx,
-                            PyUnicode::new(py, token.surface()).into(),
-                        )
-                    })
-                    .1
-                    .clone_ref(py)
+                    self.surface_cache
+                        .raw_entry_mut()
+                        .from_key(&word_idx)
+                        .or_insert_with(|| (word_idx, PyUnicode::new(py, token.surface()).into()))
+                        .1
+                        .clone_ref(py)
                 } else {
                     PyUnicode::new(py, token.surface()).into()
                 }
