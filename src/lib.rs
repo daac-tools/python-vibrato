@@ -44,7 +44,7 @@ impl Token {
     /// Return the feature of this token.
     ///
     /// :type out: str
-    #[pyo3(text_signature = "($self, index, /)")]
+    #[pyo3(text_signature = "($self, /)")]
     fn feature(&self, py: Python) -> Py<PyUnicode> {
         let list = self.list.borrow(py);
         let word_idx = list.tokens[self.index].3;
@@ -224,12 +224,22 @@ impl Vibrato {
     /// :param matrix_data: The content of `matrix.def`.
     /// :param char_data: The content of `char.def`.
     /// :param unk_data: The content of `unk.def`.
+    /// :param ignore_space: Ignores spaces from tokens.
+    ///                      This option is for compatibility with MeCab. Enable this if you want to
+    ///                      obtain the same results as MeCab.
+    /// :param max_grouping_len: Specifies the maximum grouping length for unknown words.
+    ///                          By default, the length is infinity.
+    ///                          This option is for compatibility with MeCab. Specifies the argument
+    ///                          with 24 if you want to obtain the same results as MeCab.
     /// :type lex_data: str
     /// :type matrix_data: str
     /// :type char_data: str
     /// :type unk_data: str
+    /// :type ignore_space: bool
+    /// :type max_grouping_len: int
     /// :type out: vibrato.Vibrato
     #[staticmethod]
+    #[pyo3(text_signature = "($self, lex_data, matrix_data, char_data, unk_data, /, ignore_space = False, max_grouping_len = 0)")]
     #[args(ignore_space = "false", max_grouping_len = "0")]
     pub fn from_textdict(
         lex_data: &str,
