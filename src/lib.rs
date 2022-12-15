@@ -187,7 +187,7 @@ pub struct TokenizerWrapper {
 /// :type max_grouping_len: int
 /// :rtype: vibrato.Vibrato
 #[pyclass]
-#[pyo3(text_signature = "($self, dict_data, /, ignore_space = False, max_grouping_len = 0)")]
+#[pyo3(text_signature = "(dict_data, /, ignore_space = False, max_grouping_len = 0)")]
 struct Vibrato {
     wrapper: TokenizerWrapper,
     surface_cache: HashMap<WordIdx, Py<PyUnicode>>,
@@ -236,7 +236,7 @@ impl Vibrato {
     /// :rtype: vibrato.Vibrato
     #[staticmethod]
     #[pyo3(
-        text_signature = "($self, lex_data, matrix_data, char_data, unk_data, /, ignore_space = False, max_grouping_len = 0)"
+        text_signature = "(lex_data, matrix_data, char_data, unk_data, /, ignore_space = False, max_grouping_len = 0)"
     )]
     #[args(ignore_space = "false", max_grouping_len = "0")]
     pub fn from_textdict(
