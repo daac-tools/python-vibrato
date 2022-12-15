@@ -85,7 +85,7 @@ impl Token {
     }
 }
 
-/// Iterator of tokens.
+/// Iterator that returns :class:`Token`.
 #[pyclass]
 struct TokenIterator {
     list: Py<TokenList>,
@@ -109,7 +109,7 @@ impl TokenIterator {
     }
 }
 
-/// Token list returned by the tokenizer.
+/// List of :class:`.Token` returned by the tokenizer.
 #[pyclass]
 struct TokenList {
     vibrato: Py<Vibrato>,
@@ -187,7 +187,7 @@ pub struct TokenizerWrapper {
 /// :type max_grouping_len: int
 /// :rtype: vibrato.Vibrato
 #[pyclass]
-#[pyo3(text_signature = "($self, dict_data, /, ignore_space = False, max_grouping_len = 0)")]
+#[pyo3(text_signature = "(dict_data, /, ignore_space = False, max_grouping_len = 0)")]
 struct Vibrato {
     wrapper: TokenizerWrapper,
     surface_cache: HashMap<WordIdx, Py<PyUnicode>>,
@@ -218,10 +218,10 @@ impl Vibrato {
 
     /// Create a tokenizer from the text dictionary.
     ///
-    /// :param lex_data: The content of `lex.csv`.
-    /// :param matrix_data: The content of `matrix.def`.
-    /// :param char_data: The content of `char.def`.
-    /// :param unk_data: The content of `unk.def`.
+    /// :param lex_data: The content of ``lex.csv``.
+    /// :param matrix_data: The content of ``matrix.def``.
+    /// :param char_data: The content of ``char.def``.
+    /// :param unk_data: The content of ``unk.def``.
     /// :param ignore_space: Ignores spaces from tokens. This option is for compatibility with
     ///     MeCab. Enable this if you want to obtain the same results as MeCab.
     /// :param max_grouping_len: Specifies the maximum grouping length for unknown words. By
@@ -236,7 +236,7 @@ impl Vibrato {
     /// :rtype: vibrato.Vibrato
     #[staticmethod]
     #[pyo3(
-        text_signature = "($self, lex_data, matrix_data, char_data, unk_data, /, ignore_space = False, max_grouping_len = 0)"
+        text_signature = "(lex_data, matrix_data, char_data, unk_data, /, ignore_space = False, max_grouping_len = 0)"
     )]
     #[args(ignore_space = "false", max_grouping_len = "0")]
     pub fn from_textdict(
@@ -351,6 +351,7 @@ impl Vibrato {
 fn vibrato(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Vibrato>()?;
     m.add_class::<TokenList>()?;
+    m.add_class::<TokenIterator>()?;
     m.add_class::<Token>()?;
     m.add("VIBRATO_VERSION", vibrato_rust::VERSION)?;
     Ok(())
