@@ -5,6 +5,7 @@ This is a Python wrapper for Vibrato.
 
 [![PyPI](https://img.shields.io/pypi/v/vibrato)](https://pypi.org/project/vibrato/)
 [![Build Status](https://github.com/daac-tools/python-vibrato/actions/workflows/CI.yml/badge.svg)](https://github.com/daac-tools/python-vibrato/actions)
+[![Documentation Status](https://readthedocs.org/projects/python-vibrato/badge/?version=latest)](https://python-vibrato.readthedocs.io/en/latest/?badge=latest)
 
 ## Installation
 
