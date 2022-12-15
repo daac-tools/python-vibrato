@@ -19,7 +19,7 @@ struct Token {
 impl Token {
     /// Return the surface of this token.
     ///
-    /// :type out: str
+    /// :rtype: str
     #[pyo3(text_signature = "($self, /)")]
     fn surface(&self, py: Python) -> Py<PyUnicode> {
         self.list.borrow(py).tokens[self.index].0.clone_ref(py)
@@ -27,7 +27,7 @@ impl Token {
 
     /// Return the start position (inclusive) in characters.
     ///
-    /// :type out: int
+    /// :rtype: int
     #[pyo3(text_signature = "($self, /)")]
     fn start(&self, py: Python) -> usize {
         self.list.borrow(py).tokens[self.index].1
@@ -35,7 +35,7 @@ impl Token {
 
     /// Return the end position (exclusive) in characters.
     ///
-    /// :type out: int
+    /// :rtype: int
     #[pyo3(text_signature = "($self, /)")]
     fn end(&self, py: Python) -> usize {
         self.list.borrow(py).tokens[self.index].2
@@ -43,8 +43,8 @@ impl Token {
 
     /// Return the feature of this token.
     ///
-    /// :type out: str
-    #[pyo3(text_signature = "($self, index, /)")]
+    /// :rtype: str
+    #[pyo3(text_signature = "($self, /)")]
     fn feature(&self, py: Python) -> Py<PyUnicode> {
         let list = self.list.borrow(py);
         let word_idx = list.tokens[self.index].3;
@@ -177,17 +177,15 @@ pub struct TokenizerWrapper {
 ///     2
 ///
 /// :param dict_data: A byte sequence of the dictionary.
-/// :param ignore_space: Ignores spaces from tokens.
-///                      This option is for compatibility with MeCab. Enable this if you want to
-///                      obtain the same results as MeCab.
-/// :param max_grouping_len: Specifies the maximum grouping length for unknown words.
-///                          By default, the length is infinity.
-///                          This option is for compatibility with MeCab. Specifies the argument
-///                          with 24 if you want to obtain the same results as MeCab.
+/// :param ignore_space: Ignores spaces from tokens. This option is for compatibility with MeCab.
+///      Enable this if you want to obtain the same results as MeCab.
+/// :param max_grouping_len: Specifies the maximum grouping length for unknown words. By default,
+///      the length is infinity. This option is for compatibility with MeCab. Specifies the
+///      argument with 24 if you want to obtain the same results as MeCab.
 /// :type dict_data: bytes
 /// :type ignore_space: bool
 /// :type max_grouping_len: int
-/// :type out: vibrato.Vibrato
+/// :rtype: vibrato.Vibrato
 #[pyclass]
 #[pyo3(text_signature = "($self, dict_data, /, ignore_space = False, max_grouping_len = 0)")]
 struct Vibrato {
@@ -224,12 +222,22 @@ impl Vibrato {
     /// :param matrix_data: The content of `matrix.def`.
     /// :param char_data: The content of `char.def`.
     /// :param unk_data: The content of `unk.def`.
+    /// :param ignore_space: Ignores spaces from tokens. This option is for compatibility with
+    ///     MeCab. Enable this if you want to obtain the same results as MeCab.
+    /// :param max_grouping_len: Specifies the maximum grouping length for unknown words. By
+    ///     default, the length is infinity. This option is for compatibility with MeCab.
+    ///     Specifies the argument with 24 if you want to obtain the same results as MeCab.
     /// :type lex_data: str
     /// :type matrix_data: str
     /// :type char_data: str
     /// :type unk_data: str
-    /// :type out: vibrato.Vibrato
+    /// :type ignore_space: bool
+    /// :type max_grouping_len: int
+    /// :rtype: vibrato.Vibrato
     #[staticmethod]
+    #[pyo3(
+        text_signature = "($self, lex_data, matrix_data, char_data, unk_data, /, ignore_space = False, max_grouping_len = 0)"
+    )]
     #[args(ignore_space = "false", max_grouping_len = "0")]
     pub fn from_textdict(
         lex_data: &str,
@@ -266,7 +274,7 @@ impl Vibrato {
     ///
     /// :param text: A text to tokenize.
     /// :type text: str
-    /// :type out: vibrato.TokenList
+    /// :rtype: vibrato.TokenList
     #[pyo3(text_signature = "($self, text, /)")]
     fn tokenize(mut self_: PyRefMut<Self>, py: Python, text: &str) -> TokenList {
         self_.wrapper.with_worker_mut(|worker| {
@@ -290,12 +298,7 @@ impl Vibrato {
                         .surface_cache
                         .raw_entry_mut()
                         .from_key(&word_idx)
-                        .or_insert_with(|| {
-                            (
-                                word_idx,
-                                PyUnicode::new(py, token.surface()).into(),
-                            )
-                        })
+                        .or_insert_with(|| (word_idx, PyUnicode::new(py, token.surface()).into()))
                         .1
                         .clone_ref(py)
                 } else {
@@ -317,7 +320,7 @@ impl Vibrato {
     ///
     /// :param text: A text to tokenize.
     /// :type text: str
-    /// :type out: list[str]
+    /// :rtype: list[str]
     #[pyo3(text_signature = "($self, text, /)")]
     fn tokenize_to_surfaces(&mut self, py: Python, text: &str) -> Vec<Py<PyUnicode>> {
         self.wrapper.with_worker_mut(|worker| {
@@ -330,17 +333,12 @@ impl Vibrato {
             .map(|token| {
                 let word_idx = token.word_idx();
                 if word_idx.lex_type != LexType::Unknown {
-                self.surface_cache
-                    .raw_entry_mut()
-                    .from_key(&word_idx)
-                    .or_insert_with(|| {
-                        (
-                            word_idx,
-                            PyUnicode::new(py, token.surface()).into(),
-                        )
-                    })
-                    .1
-                    .clone_ref(py)
+                    self.surface_cache
+                        .raw_entry_mut()
+                        .from_key(&word_idx)
+                        .or_insert_with(|| (word_idx, PyUnicode::new(py, token.surface()).into()))
+                        .1
+                        .clone_ref(py)
                 } else {
                     PyUnicode::new(py, token.surface()).into()
                 }
