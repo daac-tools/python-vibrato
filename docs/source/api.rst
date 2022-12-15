@@ -12,3 +12,8 @@ API reference
 
 .. autoclass:: vibrato.Token
    :members:
+
+.. data:: vibrato.VIBRATO_VERSION
+
+   Indicates the version number of *vibrato* used by this wrapper. It can be used to check the
+   compatibility of the model file.
