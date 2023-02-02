@@ -350,6 +350,7 @@ impl Vibrato {
 #[pymodule]
 fn vibrato(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Vibrato>()?;
+    m.add_class::<TokenIterator>()?;
     m.add_class::<TokenList>()?;
     m.add_class::<TokenIterator>()?;
     m.add_class::<Token>()?;
