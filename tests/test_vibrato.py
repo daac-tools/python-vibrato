@@ -4,7 +4,7 @@ import pathlib
 import vibrato
 
 
-def create_tokenizer():
+def create_tokenizer() -> vibrato.Vibrato:
     dict_path = pathlib.PurePath(__file__).parent / 'data'
     with open(dict_path / 'lex.csv', encoding='utf-8') as fp:
         lex_data = fp.read()
@@ -17,7 +17,7 @@ def create_tokenizer():
     return vibrato.Vibrato.from_textdict(lex_data, matrix_data, char_data, unk_data)
 
 
-def test_tokenlist_index():
+def test_tokenlist_index() -> None:
     tokenizer = create_tokenizer()
     tokens = tokenizer.tokenize('まぁ社長は火星猫だ')
 
@@ -29,25 +29,21 @@ def test_tokenlist_index():
     assert 'だ' == tokens[5].surface()
 
 
-def test_tokenlist_iter():
+def test_tokenlist_iter() -> None:
     tokenizer = create_tokenizer()
     tokens = tokenizer.tokenize('まぁ社長は火星猫だ')
 
-    assert ['まぁ', '社長', 'は', '火星', '猫', 'だ'] == list(
-        token.surface() for token in tokens
-    )
+    assert ['まぁ', '社長', 'は', '火星', '猫', 'だ'] == [token.surface() for token in tokens]
 
 
-def test_tokenlist_iter_positions():
+def test_tokenlist_iter_positions() -> None:
     tokenizer = create_tokenizer()
     tokens = tokenizer.tokenize('まぁ社長は火星猫だ')
 
-    assert [(0, 2), (2, 4), (4, 5), (5, 7), (7, 8), (8, 9)] == list(
-        (token.start(), token.end()) for token in tokens
-    )
+    assert [(0, 2), (2, 4), (4, 5), (5, 7), (7, 8), (8, 9)] == [(token.start(), token.end()) for token in tokens]
 
 
-def test_feature():
+def test_feature() -> None:
     tokenizer = create_tokenizer()
     tokens = tokenizer.tokenize('まぁ社長は火星猫だ')
 
@@ -58,10 +54,10 @@ def test_feature():
         '名詞,固有名詞,一般,*',
         '名詞,普通名詞,*,*',
         '助動詞,*,*,*',
-    ] == list(token.feature() for token in tokens)
+    ] == [token.feature() for token in tokens]
 
 
-def test_tokenize_to_surfaces():
+def test_tokenize_to_surfaces() -> None:
     tokenizer = create_tokenizer()
     assert ['まぁ', '社長', 'は', '火星', '猫', 'だ'] == tokenizer.tokenize_to_surfaces(
         'まぁ社長は火星猫だ'
