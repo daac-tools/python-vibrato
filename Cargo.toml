@@ -1,6 +1,6 @@
 [package]
 name = "python-vibrato"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 
 [lib]
@@ -9,6 +9,6 @@ crate-type = ["cdylib"]
 
 [dependencies]
 hashbrown = "0.13.1" # MIT or Apache-2.0
-ouroboros = "0.15.5" # MIT or Apache-2.0
-pyo3 = { version = "0.17.3", features = ["extension-module"] } # Apache-2.0
-vibrato_rust = { package = "vibrato", version = "0.3.3", default-features = false } # MIT or Apache-2.0
+ouroboros = "0.15.6" # MIT or Apache-2.0
+pyo3 = { version = "0.18.2", features = ["extension-module"] } # Apache-2.0
+vibrato_rust = { package = "vibrato", version = "0.5.0", default-features = false } # MIT or Apache-2.0
