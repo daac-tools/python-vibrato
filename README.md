@@ -79,6 +79,21 @@ tokens[0].end()
 #=> 2
 ```
 
+## Note for distributed models
+
+The distributed models are compressed in zstd format. If you want to load these compressed models,
+you must decompress them outside the API.
+
+```python
+import vibrato
+import zstandard  # zstandard package in PyPI
+
+dctx = zstandard.ZstdDecompressor()
+with open('path/to/system.dic.zst', 'rb') as fp:
+    dict_reader = dctx.stream_reader(fp)
+    tokenizer = vibrato.Vibrato(dict_reader.read())
+```
+
 ## Documentation
 
 Use the help function to show the API reference.
