@@ -152,7 +152,7 @@ pub struct TokenizerWrapper {
 /// Examples:
 ///     >>> import vibrato
 ///     >>> with open('path/to/system.dic', 'rb') as fp:
-///     >>>     dict_data = fp.read()
+///     ...     dict_data = fp.read()
 ///     >>> tokenizer = vibrato.Vibrato(dict_data)
 ///     >>> tokens = tokenizer.tokenize('社長は火星猫だ')
 ///     >>> len(tokens)

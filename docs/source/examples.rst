@@ -11,7 +11,7 @@ You can check the version number as shown below to use compatible models:
 
    >>> import vibrato
    >>> vibrato.VIBRATO_VERSION
-   '0.3.3'
+   '0.5.0'
 
 Examples:
 
@@ -20,7 +20,7 @@ Examples:
    >>> import vibrato
 
    >>> with open('path/to/system.dic', 'rb') as fp:
-   >>>     dict_data = fp.read()
+   ...     dict_data = fp.read()
    >>> tokenizer = vibrato.Vibrato(dict_data)
 
    >>> tokens = tokenizer.tokenize('社長は火星猫だ')
@@ -46,3 +46,16 @@ Examples:
 
    >>> tokens[0].end()
    2
+
+The distributed models are compressed in zstd format. If you want to load these compressed models,
+you must decompress them outside the API:
+
+.. code-block:: python
+
+   >>> import vibrato
+   >>> import zstandard  # zstandard package in PyPI
+
+   >>> dctx = zstandard.ZstdDecompressor()
+   >>> with open('path/to/system.dic.zst', 'rb') as fp:
+   ...     dict_reader = dctx.stream_reader(fp)
+   >>> tokenizer = vibrato.Vibrato(dict_reader.read())
