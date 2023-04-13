@@ -19,27 +19,22 @@ Examples:
 
    >>> import vibrato
 
-   >>> with open('path/to/system.dic', 'rb') as fp:
-   ...     dict_data = fp.read()
-   >>> tokenizer = vibrato.Vibrato(dict_data)
+   >>> with open('tests/data/system.dic', 'rb') as fp:
+   ...     tokenizer = vibrato.Vibrato(fp.read())
 
    >>> tokens = tokenizer.tokenize('社長は火星猫だ')
 
    >>> len(tokens)
    5
 
-   >>> list(tokens)
-   [Token { surface: "社長", feature: "名詞,一般,*,*,*,*,社長,シャチョウ,シャチョー,," },
-    Token { surface: "は", feature: "助詞,係助詞,*,*,*,*,は,ハ,ワ,," },
-    Token { surface: "火星", feature: "名詞,一般,*,*,*,*,火星,カセイ,カセイ,," },
-    Token { surface: "猫", feature: "名詞,一般,*,*,*,*,猫,ネコ,ネコ,," },
-    Token { surface: "だ", feature: "助動詞,*,*,*,特殊・ダ,基本形,だ,ダ,ダ,," }]
+   >>> tokens[0]
+   Token { surface: "社長", feature: "名詞,普通名詞,一般,*" }
 
    >>> tokens[0].surface()
    '社長'
 
    >>> tokens[0].feature()
-   '名詞,一般,*,*,*,*,社長,シャチョウ,シャチョー,,'
+   '名詞,普通名詞,一般,*'
 
    >>> tokens[0].start()
    0
@@ -56,6 +51,6 @@ you must decompress them outside the API:
    >>> import zstandard  # zstandard package in PyPI
 
    >>> dctx = zstandard.ZstdDecompressor()
-   >>> with open('path/to/system.dic.zst', 'rb') as fp:
-   ...     dict_reader = dctx.stream_reader(fp)
-   >>> tokenizer = vibrato.Vibrato(dict_reader.read())
+   >>> with open('tests/data/system.dic.zst', 'rb') as fp:
+   ...     with dctx.stream_reader(fp) as dict_reader:
+   ...         tokenizer = vibrato.Vibrato(dict_reader.read())
