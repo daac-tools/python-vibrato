@@ -42,7 +42,7 @@ Check the version number as shown below to use compatible models:
 ```python
 >>> import vibrato
 >>> vibrato.VIBRATO_VERSION
-'0.5.0'
+'0.5.1'
 
 ```
 
