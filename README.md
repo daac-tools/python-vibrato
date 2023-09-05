@@ -20,13 +20,13 @@ $ pip install vibrato
 ### Build from source
 
 You need to install the Rust compiler following [the documentation](https://www.rust-lang.org/tools/install) beforehand.
-daachorse uses `pyproject.toml`, so you also need to upgrade pip to version 19 or later.
+vibrato uses `pyproject.toml`, so you also need to upgrade pip to version 19 or later.
 
 ```
 $ pip install --upgrade pip
 ```
 
-After setting up the environment, you can install daachorse as follows:
+After setting up the environment, you can install vibrato as follows:
 
 ```
 $ pip install git+https://github.com/daac-tools/python-vibrato
@@ -42,7 +42,7 @@ Check the version number as shown below to use compatible models:
 ```python
 >>> import vibrato
 >>> vibrato.VIBRATO_VERSION
-'0.5.0'
+'0.5.1'
 
 ```
 
