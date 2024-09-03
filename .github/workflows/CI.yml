@@ -54,9 +54,9 @@ jobs:
       with:
         command: sdist
     - name: Upload wheels
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: wheels
+        name: wheels-${{ matrix.runs-on }}
         path: target/wheels
 
   pack-linux:
@@ -80,9 +80,9 @@ jobs:
         manylinux: auto
         args: -i ${{ matrix.python-version }} --release
     - name: Upload wheels
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: wheels
+        name: wheels-${{ matrix.runs-on }}
         path: target/wheels
 
   pack-windows:
@@ -107,9 +107,9 @@ jobs:
         manylinux: auto
         args: -i ${{ matrix.python-version }} --release
     - name: Upload wheels
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: wheels
+        name: wheels-${{ matrix.runs-on }}
         path: target/wheels
 
   pack-macos:
@@ -132,9 +132,9 @@ jobs:
         manylinux: auto
         args: -i ${{ matrix.python-version }} --release --universal2
     - name: Upload wheels
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: wheels
+        name: wheels-${{ matrix.runs-on }}
         path: target/wheels
 
   release:
@@ -143,9 +143,10 @@ jobs:
     needs: [ pack-sdist, pack-linux, pack-windows, pack-macos ]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: wheels
+          pattern: wheels-*
+          merge-multiple: true
       - name: Publish to PyPI
         uses: messense/maturin-action@v1
         env:
