@@ -15,11 +15,11 @@ jobs:
     strategy:
       matrix:
         runs-on: [ ubuntu-latest, windows-latest, macos-latest ]
-        python-version: [ '3.8', '3.9', '3.10', '3.11', '3.12' ]
+        python-version: [ '3.8', '3.9', '3.10', '3.11', '3.12', '3.13', '3.14' ]
     runs-on: ${{ matrix.runs-on }}
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-python@v4
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
     - uses: dtolnay/rust-toolchain@stable
@@ -44,10 +44,10 @@ jobs:
     if: "startsWith(github.ref, 'refs/tags/')"
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-python@v4
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
       with:
-        python-version: '3.12'
+        python-version: '3.14'
     - uses: dtolnay/rust-toolchain@stable
     - name: Build package
       uses: PyO3/maturin-action@v1
@@ -56,7 +56,7 @@ jobs:
     - name: Upload wheels
       uses: actions/upload-artifact@v4
       with:
-        name: wheels-${{ matrix.runs-on }}
+        name: sdist
         path: target/wheels
 
   pack-linux:
@@ -65,24 +65,23 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ '3.8', '3.9', '3.10', '3.11', '3.12' ]
         target: [ x86_64, i686 ]
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-python@v4
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: '3.8'
     - uses: dtolnay/rust-toolchain@stable
     - name: Build package
       uses: PyO3/maturin-action@v1
       with:
         target: ${{ matrix.target }}
         manylinux: auto
-        args: -i ${{ matrix.python-version }} --release
+        args: -i 3.8 --release
     - name: Upload wheels
       uses: actions/upload-artifact@v4
       with:
-        name: wheels-${{ matrix.runs-on }}
+        name: wheels-linux-${{ matrix.target }}
         path: target/wheels
 
   pack-windows:
@@ -91,13 +90,12 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: [ '3.8', '3.9', '3.10', '3.11', '3.12' ]
         target: [ x64, x86 ]
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-python@v4
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: '3.8'
         architecture: ${{ matrix.target }}
     - uses: dtolnay/rust-toolchain@stable
     - name: Build package
@@ -105,36 +103,32 @@ jobs:
       with:
         target: ${{ matrix.target }}
         manylinux: auto
-        args: -i ${{ matrix.python-version }} --release
+        args: -i 3.8 --release
     - name: Upload wheels
       uses: actions/upload-artifact@v4
       with:
-        name: wheels-${{ matrix.runs-on }}
+        name: wheels-windows-${{ matrix.target }}
         path: target/wheels
 
   pack-macos:
     needs: [ test ]
     if: "startsWith(github.ref, 'refs/tags/')"
     runs-on: macos-latest
-    strategy:
-      matrix:
-        python-version: [ '3.8', '3.9', '3.10', '3.11', '3.12' ]
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-python@v4
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: '3.8'
     - uses: dtolnay/rust-toolchain@stable
     - name: Build package
       uses: PyO3/maturin-action@v1
       with:
-        target: ${{ matrix.target }}
         manylinux: auto
-        args: -i ${{ matrix.python-version }} --release --universal2
+        args: -i 3.8 --release --universal2
     - name: Upload wheels
       uses: actions/upload-artifact@v4
       with:
-        name: wheels-${{ matrix.runs-on }}
+        name: wheels-macos-universal2
         path: target/wheels
 
   release:
@@ -143,6 +137,9 @@ jobs:
     needs: [ pack-sdist, pack-linux, pack-windows, pack-macos ]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: sdist
       - uses: actions/download-artifact@v4
         with:
           pattern: wheels-*
