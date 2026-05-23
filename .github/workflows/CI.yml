@@ -50,7 +50,7 @@ jobs:
       uses: PyO3/maturin-action@v1
       with:
         command: sdist
-    - name: Upload wheels
+    - name: Upload sdist
       uses: actions/upload-artifact@v4
       with:
         name: sdist
