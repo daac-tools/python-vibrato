@@ -133,6 +133,9 @@ jobs:
     if: "startsWith(github.ref, 'refs/tags/')"
     needs: [ pack-sdist, pack-linux, pack-windows, pack-macos ]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -142,9 +145,7 @@ jobs:
           pattern: wheels-*
           merge-multiple: true
       - name: Publish to PyPI
-        uses: messense/maturin-action@v1
-        env:
-          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        uses: PyO3/maturin-action@v1
         with:
           command: upload
           args: --skip-existing *
