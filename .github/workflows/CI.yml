@@ -139,14 +139,8 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: sdist
-          path: dist
-      - uses: actions/download-artifact@v4
-        with:
-          path: dist
           pattern: wheels-*
-          merge-multiple: true
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
       - name: Publish to PyPI
-        run: uv publish --trusted-publishing always
+        run: uv publish --trusted-publishing always wheels-*/*
