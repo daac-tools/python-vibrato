@@ -120,7 +120,6 @@ jobs:
     - name: Build package
       uses: PyO3/maturin-action@v1
       with:
-        target: ${{ matrix.target }}
         args: -i 3.10 --release --target universal2-apple-darwin
     - name: Upload wheels
       uses: actions/upload-artifact@v7
