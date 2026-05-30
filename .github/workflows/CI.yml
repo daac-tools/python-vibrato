@@ -11,6 +11,17 @@ on:
       - 'v*.*.*'
 
 jobs:
+  check-release-version:
+    if: "startsWith(github.ref, 'refs/tags/')"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+    - name: Verify tag matches Cargo.toml version
+      run: |
+        TAG="${GITHUB_REF_NAME#v}"
+        VERSION="$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -n1)"
+        test "$TAG" = "$VERSION"
+
   test:
     strategy:
       matrix:
@@ -40,7 +51,7 @@ jobs:
         python -m doctest docs/source/examples.rst
 
   pack-sdist:
-    needs: [ test ]
+    needs: [ check-release-version, test ]
     if: "startsWith(github.ref, 'refs/tags/')"
     runs-on: ubuntu-latest
     steps:
@@ -57,7 +68,7 @@ jobs:
         path: target/wheels
 
   pack-linux:
-    needs: [ test ]
+    needs: [ check-release-version, test ]
     if: "startsWith(github.ref, 'refs/tags/')"
     runs-on: ubuntu-latest
     strategy:
@@ -82,7 +93,7 @@ jobs:
         path: target/wheels
 
   pack-windows:
-    needs: [ test ]
+    needs: [ check-release-version, test ]
     if: "startsWith(github.ref, 'refs/tags/')"
     runs-on: windows-latest
     strategy:
@@ -107,7 +118,7 @@ jobs:
         path: target/wheels
 
   pack-macos:
-    needs: [ test ]
+    needs: [ check-release-version, test ]
     if: "startsWith(github.ref, 'refs/tags/')"
     runs-on: macos-latest
     steps:
