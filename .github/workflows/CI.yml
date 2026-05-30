@@ -51,7 +51,7 @@ jobs:
       with:
         command: sdist
     - name: Upload sdist
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: sdist
         path: target/wheels
@@ -76,7 +76,7 @@ jobs:
         manylinux: auto
         args: -i 3.10 --release
     - name: Upload wheels
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: wheels-linux-${{ matrix.target }}
         path: target/wheels
@@ -99,10 +99,9 @@ jobs:
       uses: PyO3/maturin-action@v1
       with:
         target: ${{ matrix.target }}
-        manylinux: auto
         args: -i 3.10 --release
     - name: Upload wheels
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: wheels-windows-${{ matrix.target }}
         path: target/wheels
@@ -120,10 +119,9 @@ jobs:
     - name: Build package
       uses: PyO3/maturin-action@v1
       with:
-        manylinux: auto
-        args: -i 3.10 --release --universal2
+        args: -i 3.10 --release --target universal2-apple-darwin
     - name: Upload wheels
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: wheels-macos-universal2
         path: target/wheels
@@ -137,7 +135,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: wheels-*
       - name: Install uv
